@@ -4,6 +4,7 @@ import { CatsService } from './cats.service';
 
 describe('CatsController', () => {
   let controller: CatsController;
+  let service: CatsService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -12,6 +13,7 @@ describe('CatsController', () => {
     }).compile();
 
     controller = module.get<CatsController>(CatsController);
+    service = module.get<CatsService>(CatsService);
   });
 
   it('should be defined', () => {
@@ -19,61 +21,89 @@ describe('CatsController', () => {
   });
 
   describe('create', () => {
-    it('should create a cat', () => {
+    it('should create a cat', async () => {
       const dto = { name: 'Tom', age: 3, breed: 'Tabby' };
-      const result = controller.create(dto);
-      expect(result.message).toBe('Cat created successfully');
-      expect(result.cat).toMatchObject(dto);
+      const resultData = {
+        message: 'Cat created successfully',
+        cat: { id: 1, ...dto },
+      };
+      jest.spyOn(service, 'create').mockResolvedValue(resultData as any);
+      const result = await controller.create(dto);
+      expect(result).toEqual(resultData);
     });
   });
 
   describe('findAll', () => {
-    it('should return all cats', () => {
-      controller.create({ name: 'Jerry', age: 2, breed: 'Siamese' });
-      const cats = controller.findAll();
-      if (Array.isArray(cats)) {
-        expect(cats.length).toBeGreaterThan(0);
-      } else {
-        expect(cats).toHaveProperty('message');
-      }
+    it('should return all cats', async () => {
+      const cats = [{ id: 1, name: 'Jerry', age: 2, breed: 'Siamese' }];
+      jest.spyOn(service, 'findAll').mockResolvedValue(cats as any);
+      const result = await controller.findAll();
+      expect(Array.isArray(result)).toBe(true);
+      expect((result as any[]).length).toBeGreaterThan(0);
+    });
+
+    it('should return message if no cats found', async () => {
+      jest
+        .spyOn(service, 'findAll')
+        .mockResolvedValue({ message: 'No cats found' });
+      expect(await controller.findAll()).toEqual({ message: 'No cats found' });
     });
   });
 
   describe('findOne', () => {
-    it('should return a cat by id', () => {
-      const { cat } = controller.create({ name: 'Spike', age: 4, breed: 'Bulldog' });
-      expect(controller.findOne(cat.id.toString())).toMatchObject(cat);
+    it('should return a cat by id', async () => {
+      const cat = { id: 1, name: 'Spike', age: 4, breed: 'Bulldog' };
+      jest.spyOn(service, 'findOne').mockResolvedValue(cat as any);
+      expect(await controller.findOne('1')).toMatchObject(cat);
     });
 
-    it('should return not found message if cat does not exist', () => {
-      expect(controller.findOne('999')).toEqual({ message: 'Cat with id 999 not found' });
+    it('should return not found message if cat does not exist', async () => {
+      jest
+        .spyOn(service, 'findOne')
+        .mockResolvedValue({ message: 'Cat with id 999 not found' });
+      expect(await controller.findOne('999')).toEqual({
+        message: 'Cat with id 999 not found',
+      });
     });
   });
 
   describe('update', () => {
-    it('should update a cat', () => {
-      const { cat } = controller.create({ name: 'Butch', age: 5, breed: 'Persian' });
+    it('should update a cat', async () => {
       const updateDto = { name: 'Butch Updated' };
-      const result = controller.update(cat.id.toString(), updateDto);
-      expect(result.message).toBe('Cat updated successfully');
-      expect(result.cat && result.cat.name).toBe('Butch Updated');
+      const resultData = {
+        message: 'Cat updated successfully',
+        cat: { id: 1, name: 'Butch Updated', age: 5, breed: 'Persian' },
+      };
+      jest.spyOn(service, 'update').mockResolvedValue(resultData as any);
+      const result = await controller.update('1', updateDto);
+      expect(result).toEqual(resultData);
     });
 
-    it('should return not found message if cat does not exist', () => {
-      expect(controller.update('999', { name: 'Ghost' })).toEqual({ message: 'Cat with id 999 not found' });
+    it('should return not found message if cat does not exist', async () => {
+      jest
+        .spyOn(service, 'update')
+        .mockResolvedValue({ message: 'Cat with id 999 not found' });
+      expect(await controller.update('999', { name: 'Ghost' })).toEqual({
+        message: 'Cat with id 999 not found',
+      });
     });
   });
 
   describe('remove', () => {
-    it('should remove a cat', () => {
-      const { cat } = controller.create({ name: 'Nibbles', age: 1, breed: 'Maine Coon' });
-      const result = controller.remove(cat.id.toString());
-      expect(result.message).toBe(`Cat with id ${cat.id} removed successfully`);
-      expect(controller.findOne(cat.id.toString())).toEqual({ message: `Cat with id ${cat.id} not found` });
+    it('should remove a cat', async () => {
+      const resultData = { message: 'Cat with id 1 removed successfully' };
+      jest.spyOn(service, 'remove').mockResolvedValue(resultData as any);
+      const result = await controller.remove('1');
+      expect(result).toEqual(resultData);
     });
 
-    it('should return not found message if cat does not exist', () => {
-      expect(controller.remove('999')).toEqual({ message: 'Cat with id 999 not found' });
+    it('should return not found message if cat does not exist', async () => {
+      jest
+        .spyOn(service, 'remove')
+        .mockResolvedValue({ message: 'Cat with id 999 not found' });
+      expect(await controller.remove('999')).toEqual({
+        message: 'Cat with id 999 not found',
+      });
     });
   });
 });
